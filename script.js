@@ -35,23 +35,64 @@ function getCurrentUser() {
     return null;
 }
 
-// Initialize Application
+// ===============================================
+// *** SPA CHANGE: New Functions for View Management ***
+// ===============================================
+
+function showLandingView() {
+    // Show the landing/marketing content
+    document.getElementById('landing-view').style.display = 'block';
+    // Hide the application content
+    document.getElementById('dashboard-view').style.display = 'none';
+    // Optional: Update URL without reloading (cleaner navigation)
+    window.history.pushState({}, 'Home', '/');
+}
+
+function showDashboardView() {
+    const user = getCurrentUser();
+    
+    if (!user) {
+        // If not logged in, force back to landing and prompt login
+        showLandingView();
+        showLoginPrompt(); 
+        return;
+    }
+
+    // Hide the landing content
+    document.getElementById('landing-view').style.display = 'none';
+    // Show the application content
+    document.getElementById('dashboard-view').style.display = 'block';
+    
+    // Update URL without reloading
+    window.history.pushState({}, 'Dashboard', '/dashboard'); 
+    
+    // Initialize dashboard content and load data
+    initializeDashboard(); 
+}
+
+// ===============================================
+// Initialize Application - Updated for SPA
+// ===============================================
 function initializeApp() {
     initializeNavigation();
     
     // Check if user is logged in
     const user = getCurrentUser();
+    
+    // *** SPA CHANGE: Use content-swapping logic instead of URL checks ***
     if (user) {
         updateUIForLoggedInUser(user);
+        // If logged in, automatically show the dashboard view
+        showDashboardView(); 
+    } else {
+        updateUIForLoggedOutUser();
+        // If logged out, show the marketing/landing page view
+        showLandingView();
     }
     
-    if (window.location.pathname.includes('dashboard.html')) {
-        initializeDashboard();
-    }
-    
-    if (window.location.pathname.includes('pricing.html')) {
-        initializePricingPage();
-    }
+    // Removed old checks for:
+    // if (window.location.pathname.includes('dashboard.html')) { ... }
+    // if (window.location.pathname.includes('pricing.html')) { ... }
     
     setupAnimationObserver();
 }
@@ -179,7 +220,8 @@ async function upgradeUserTier(newTier) {
 function logout() {
     removeAuthToken();
     updateUIForLoggedOutUser();
-    window.location.href = '/index.html';
+    // *** SPA CHANGE: Use showLandingView() instead of page reload/redirect ***
+    showLandingView(); 
 }
 
 function updateUIForLoggedInUser(user) {
@@ -200,7 +242,7 @@ function updateUIForLoggedInUser(user) {
                 👤 ${user.email}
             </button>
             <div class="dropdown-content">
-                <a href="/dashboard.html">Dashboard</a>
+                <a href="#" onclick="showDashboardView()">Dashboard</a>
                 <a href="/profile.html">Profile</a>
                 <a href="/pricing.html">Upgrade Plan</a>
                 <a href="#" onclick="logout()">Logout</a>
@@ -230,22 +272,15 @@ function updateUIForLoggedOutUser() {
 
 // Modal Functions
 function showLoginModal() {
-    const modal = document.createElement('div');
-    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-    modal.innerHTML = `
-        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <div id="auth-forms">
-                <!-- Login form will be inserted here -->
-            </div>
-            <div class="text-center mt-4">
-                <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700">
-                    Cancel
-                </button>
-            </div>
-        </div>
-    `;
+    // *** SPA CHANGE: Use the pre-existing static modal structure in index.html ***
+    const modal = document.getElementById('auth-modal');
+    if (!modal) {
+        // Fallback for dynamically creating if not found (optional)
+        console.error("Auth modal element not found in HTML.");
+        return;
+    }
     
-    document.body.appendChild(modal);
+    modal.style.display = 'flex';
     showLoginForm();
 }
 
@@ -311,9 +346,10 @@ async function handleLoginSubmit(event) {
     const result = await loginUser(email, password);
     
     if (result.success) {
-        // Close modal and refresh page
-        document.querySelector('.fixed').remove();
-        window.location.reload();
+        // Close modal
+        document.getElementById('auth-modal').style.display = 'none';
+        // *** SPA CHANGE: Switch to dashboard view instead of page reload ***
+        showDashboardView(); 
     } else {
         alert('Login failed: ' + result.error);
     }
@@ -327,9 +363,10 @@ async function handleRegisterSubmit(event) {
     const result = await registerUser(email, password);
     
     if (result.success) {
-        // Close modal and refresh page
-        document.querySelector('.fixed').remove();
-        window.location.reload();
+        // Close modal
+        document.getElementById('auth-modal').style.display = 'none';
+        // *** SPA CHANGE: Switch to dashboard view instead of page reload ***
+        showDashboardView();
     } else {
         alert('Registration failed: ' + result.error);
     }
@@ -368,9 +405,14 @@ function initializeNavigation() {
 function initializeDashboard() {
     const user = getCurrentUser();
     if (!user) {
+        // *** SPA CHANGE: Ensure view is corrected if login state is lost ***
+        showLandingView();
         showLoginPrompt();
         return;
     }
+    
+    // Welcome message update (assuming this function exists elsewhere)
+    document.getElementById('welcome-message').textContent = `Welcome Back, ${user.email.split('@')[0]}!`;
     
     loadUserUsage();
     initializeAnalysisForm();
@@ -426,9 +468,13 @@ async function loadUserUsage() {
 }
 
 // ... (rest of the dashboard functions from previous version remain the same)
-// [Include all the dashboard functions from the previous script.js here]
+// NOTE: ALL functions called within the script (like updateUsageDisplay, 
+// updateStats, initializeAnalysisForm, loadRecentAnalyses) must be defined
+// above the final export block, but are omitted here for brevity.
 
-// Make functions globally available
+// ===============================================
+// Make functions globally available (for HTML events)
+// ===============================================
 window.dismissWarning = dismissWarning;
 window.showUpgradeModal = showUpgradeModal;
 window.initiateCheckout = initiateCheckout;
@@ -439,3 +485,15 @@ window.showLoginForm = showLoginForm;
 window.showRegisterForm = showRegisterForm;
 window.handleLoginSubmit = handleLoginSubmit;
 window.handleRegisterSubmit = handleRegisterSubmit;
+
+// *** CRITICAL MISSING FUNCTIONS ADDED ***
+// These were causing the previous ReferenceErrors and are likely called by dashboard.html content
+window.showLoginPrompt = showLoginPrompt; 
+window.updateUsageDisplay = updateUsageDisplay; 
+window.updateStats = updateStats; 
+window.initializeAnalysisForm = initializeAnalysisForm; 
+window.loadRecentAnalyses = loadRecentAnalyses;
+
+// *** NEW SPA FUNCTIONS ADDED ***
+window.showDashboardView = showDashboardView;
+window.showLandingView = showLandingView;
