@@ -1,5 +1,5 @@
 // API Configuration - Update with your actual backend URL
-const API_BASE_URL = https://api.templetsolutions.com/;
+const API_BASE_URL = 'https://api.templetsolutions.com/';
 
 // Initialize Application
 function initializeApp() {
@@ -121,7 +121,7 @@ function getWarningClass(warningLevel) {
 function updateStats(usageInfo) {
     document.getElementById('total-analyses').textContent = '47';
     document.getElementById('monthly-used').textContent = usageInfo.used;
-    document.getElementById('monthly-remaining').textContent = usageInfo.remaining;
+    document.getElementById('monthly-remaining').textContent = usageremaining;
     document.getElementById('average-score').textContent = '82';
 }
 
