@@ -10,158 +10,195 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <!-- ===================== HEADER ===================== -->
     <header>
         <div class="header-content-wrapper">
             <div class="logo-h1">
-                <a href="https://templetsolutions.com/index.html" title="Go to Home Page">
+                <a href="/" title="Go to Home Page">
                     <img alt="Templet Solutions Logo" src="./images/logo.png" style="max-height:180px; width:auto;"/>
                 </a>
+            </div>
+            <div id="navigation-bar-wrapper">
+                <nav class="main-nav">
+                    <ul class="nav-links">
+                        <li><a href="/" data-nav="home">Home</a></li>
+                        <li><a href="/pricing.html" data-nav="pricing">Pricing</a></li>
+                        <li class="auth-links">
+                            <a href="#" onclick="showLoginModal()" style="color: var(--ts-teal);">Login</a>
+                        </li>
+                    </ul>
+                </nav>
             </div>
         </div>
     </header>
     
-    <div id="navigation-bar-wrapper">
-        <!-- Navigation will be loaded from nav-contents.html -->
-    </div>
-
     <main>
-        <section class="hero" id="home">
-            <div class="container">
-                <h1 class="animate-on-scroll">Analyze Your Content with the C⁴AT³ Framework</h1>
-                <p class="animate-on-scroll">Get AI-powered content analysis, detailed scoring, and actionable recommendations to optimize for AI citation and search visibility.</p>
-                <a class="hero-cta animate-on-scroll" href="dashboard.html">Start Analyzing Content</a>
-            </div>
-        </section>
-
-        <section class="features" id="features">
-            <div class="container">
-                <div class="section-header">
-                    <h2 class="animate-on-scroll">Powerful Content Analysis</h2>
-                    <p class="animate-on-scroll">
-                        Our C⁴AT³ Analyzer provides comprehensive content evaluation using the same framework that drives AI Citation Optimization success.
-                    </p>
+        <div id="landing-view">
+            <section class="hero" id="home">
+                <div class="container">
+                    <h1 class="animate-on-scroll">Analyze Your Content with the C⁴AT³ Framework</h1>
+                    <p class="animate-on-scroll">Get AI-powered content analysis, detailed scoring, and actionable recommendations to optimize for AI citation and search visibility.</p>
+                    <a class="hero-cta animate-on-scroll" href="#" onclick="showLoginModal()">Start Analyzing Content</a>
                 </div>
-                <div class="features-grid">
-                    <div class="feature-card animate-on-scroll">
-                        <div class="feature-icon">
-                            <img alt="C⁴AT³ Scoring Icon" src="./images/earth-search.svg"/>
+            </section>
+
+            <section class="features" id="features">
+                <div class="container">
+                    <div class="section-header">
+                        <h2 class="animate-on-scroll">Powerful Content Analysis</h2>
+                        <p class="animate-on-scroll">
+                            Our C⁴AT³ Analyzer provides comprehensive content evaluation using the same framework that drives AI Citation Optimization success.
+                        </p>
+                    </div>
+                    <div class="features-grid">
+                        <div class="feature-card animate-on-scroll">... Comprehensive C⁴AT³ Scoring ...</div>
+                        <div class="feature-card animate-on-scroll">... AI Citation Readiness ...</div>
+                        <div class="feature-card animate-on-scroll">... Actionable Recommendations ...</div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="content-section" id="how-it-works">
+                <div class="container content-grid">
+                    <div class="content-text animate-on-scroll">
+                        <h2>How the C⁴AT³ Analyzer Works</h2>
+                        <p>Our analyzer uses advanced AI to evaluate your content against the same criteria that determine AI citation worthiness...</p>
+                        <a class="cta-button" href="#" onclick="showLoginModal()">Try the Analyzer</a>
+                    </div>
+                    <div class="content-image animate-on-scroll">
+                        <div style="width: 100%; height: 300px; background: linear-gradient(135deg, var(--ts-teal) 0%, var(--ts-medium-blue) 100%); border-radius: 15px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.2rem; box-shadow: 0 20px 40px rgba(0,0,0,0.1);">
+                            C⁴AT³ Framework Analysis
                         </div>
-                        <h3>Comprehensive C⁴AT³ Scoring</h3>
-                        <p>Get detailed 0-100 scores across all C⁴AT³ dimensions: Credibility, Clarity, Comprehensiveness, Actionability, Technical Excellence, and Timeliness.</p>
                     </div>
-                    <div class="feature-card animate-on-scroll">
-                        <div class="feature-icon">
-                            <img alt="AI Optimization Icon" src="./images/rocket.svg"/>
+                </div>
+            </section>
+
+            <section class="content-section" id="pricing-overview">
+                ...
+                <a class="cta-button" href="pricing.html">View All Plans</a>
+                ...
+            </section>
+
+            <section class="lead-magnet" id="get-started">
+                <div class="container">
+                    <h2 class="animate-on-scroll">Ready to Optimize Your Content?</h2>
+                    <p class="animate-on-scroll">Start analyzing your content with our C⁴AT³ Framework and get actionable insights to improve your AI citation potential.</p>
+                    <a class="hero-cta animate-on-scroll" href="#" onclick="showLoginModal()">Start Analyzing Now</a>
+                </div>
+            </section>
+        </div>
+        
+        
+        <div id="dashboard-view" style="display:none;">
+            <section class="dashboard-hero">
+                <div class="container">
+                    <h1 id="welcome-message">Welcome Back!</h1>
+                    <p>Your comprehensive content analysis hub.</p>
+                </div>
+            </section>
+
+            <section class="stats-section">
+                <div class="container">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h3>Total Analyses</h3>
+                            <p id="total-analyses">--</p>
                         </div>
-                        <h3>AI Citation Readiness</h3>
-                        <p>Evaluate how well your content meets the criteria that AI systems look for when selecting sources for citation and inclusion in AI Overviews.</p>
-                    </div>
-                    <div class="feature-card animate-on-scroll">
-                        <div class="feature-icon">
-                            <img alt="Improvement Recommendations Icon" src="./images/lightbulb.svg"/>
+                        <div class="stat-card">
+                            <h3>Average C⁴AT³ Score</h3>
+                            <p id="avg-score">--</p>
                         </div>
-                        <h3>Actionable Recommendations</h3>
-                        <p>Receive specific, prioritized improvements to enhance your content's authority and increase its chances of being cited by AI systems.</p>
+                        <div class="stat-card">
+                            <h3>Current Tier</h3>
+                            <p id="user-tier">--</p>
+                        </div>
+                        <div class="stat-card usage-card">
+                            <h3>Monthly Usage</h3>
+                            <div class="usage-bar-wrapper">
+                                <div id="usage-bar" class="usage-bar" style="width: 0%;"></div>
+                            </div>
+                            <p id="usage-text">-- / -- remaining</p>
+                        </div>
+                    </div>
+                    <div id="usage-warning" class="warning-message" style="display:none;">
+                        <span id="warning-icon">⚠️</span>
+                        <span id="warning-text"></span>
+                        <button class="cta-button small-button" onclick="showUpgradeModal()">Upgrade Now</button>
+                        <button class="small-button" onclick="dismissWarning()">Dismiss</button>
                     </div>
                 </div>
-            </div>
-        </section>
+            </section>
 
-        <section class="content-section" id="how-it-works">
-            <div class="container content-grid">
-                <div class="content-text animate-on-scroll">
-                    <h2>How the C⁴AT³ Analyzer Works</h2>
-                    <p>Our analyzer uses advanced AI to evaluate your content against the same criteria that determine AI citation worthiness. Unlike basic readability checkers, we assess the complete picture of content quality that matters to modern search systems.</p>
-                    <p>The C⁴AT³ Framework evaluates six critical dimensions that influence whether AI systems will trust and cite your content as an authoritative source.</p>
-                    <a class="cta-button" href="dashboard.html">Try the Analyzer</a>
+            <section class="analysis-section">
+                <div class="container">
+                    <h2>Run a New Analysis</h2>
+                    <form id="analysis-form" class="analysis-form">
+                        <input type="url" id="content-url" placeholder="Enter URL to Analyze (e.g., https://example.com/article)" required>
+                        <select id="analysis-type" name="analysis_type">
+                            <option value="basic">Basic C⁴AT³ Score</option>
+                            <option value="deep">Deep Dive (Detailed Breakdown)</option>
+                            <option value="competitor">Competitor Comparison (Pro Only)</option>
+                        </select>
+                        <button type="submit" class="cta-button" id="analyze-button">Analyze Content</button>
+                    </form>
+                    <div id="analysis-result-display" style="margin-top: 20px;">
+                        </div>
                 </div>
-                <div class="content-image animate-on-scroll">
-                    <div style="width: 100%; height: 300px; background: linear-gradient(135deg, var(--ts-teal) 0%, var(--ts-medium-blue) 100%); border-radius: 15px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.2rem; box-shadow: 0 20px 40px rgba(0,0,0,0.1);">
-                        C⁴AT³ Framework Analysis
-                    </div>
-                </div>
-            </div>
-        </section>
+            </section>
 
-        <section class="content-section" id="pricing-overview">
-            <div class="container content-grid">
-                <div class="content-image animate-on-scroll">
-                    <div style="width: 100%; height: 300px; background: linear-gradient(135deg, var(--ts-navy) 0%, var(--ts-teal) 100%); border-radius: 15px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.2rem; box-shadow: 0 20px 40px rgba(0,0,0,0.1);">
-                        Pricing Plans Comparison
-                    </div>
+            <section class="history-section">
+                <div class="container">
+                    <h2>Recent Analysis History</h2>
+                    <table id="analysis-history-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>URL / Title</th>
+                                <th>Tier</th>
+                                <th>Score</th>
+                                <th>Grade</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="analysis-history-body">
+                            </tbody>
+                    </table>
                 </div>
-                <div class="content-text animate-on-scroll">
-                    <h2>Flexible Analysis Plans</h2>
-                    <p>Choose the plan that fits your content analysis needs, from casual creators to professional marketers and agencies.</p>
-                    <ol>
-                        <li><strong>Free Tier:</strong> 5 analyses per month with basic scoring</li>
-                        <li><strong>Starter Plan:</strong> 20 analyses with detailed dimension breakdowns</li>
-                        <li><strong>Professional Plan:</strong> 100 analyses with competitor comparison and exports</li>
-                        <li><strong>One-Time Analysis:</strong> Perfect for occasional users</li>
-                    </ol>
-                    <a class="cta-button" href="pricing.html">View All Plans</a>
-                </div>
-            </div>
-        </section>
-
-        <section class="lead-magnet" id="get-started">
-            <div class="container">
-                <h2 class="animate-on-scroll">Ready to Optimize Your Content?</h2>
-                <p class="animate-on-scroll">Start analyzing your content with our C⁴AT³ Framework and get actionable insights to improve your AI citation potential.</p>
-                <a class="hero-cta animate-on-scroll" href="dashboard.html">Start Analyzing Now</a>
-            </div>
-        </section>
+            </section>
+        </div>
+        
     </main>
 
-    <!-- ===================== FOOTER ===================== -->
     <footer>
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-section">
-                    <h3>Templet Solutions</h3>
-                    <p>Building authority and organic growth for the age of AI search.</p>
-                    <p>Ocean Springs, MS</p>
+        ...
+    </footer>
+
+    <div id="auth-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display:none;">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div id="auth-forms">
                 </div>
-                <div class="footer-section">
-                    <h3>Quick Links</h3>
-                    <ul>
-                        <li><a href="./index.html">Home</a></li>
-                        <li><a href="./pricing.html">Pricing</a></li>
-                        <li><a href="./dashboard.html">Analyzer</a></li>
-                        <li><a href="https://templetsolutions.com/articles/">Articles</a></li>
-                        <li><a href="https://templetsolutions.com/services-prices/services-prices.html">Services</a></li>
-                    </ul>
-                </div>
-                <div class="footer-section">
-                    <h3>Contact</h3>
-                    <ul>
-                        <li><a href="tel:601-522-2156">Phone: 601-522-2156</a></li>
-                        <li><a href="mailto:info@templetsolutions.com">Email: info@templetsolutions.com</a></li>
-                    </ul>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                © 2025 Templet Solutions. All rights reserved.
+            <div class="text-center mt-4">
+                <button onclick="document.getElementById('auth-modal').style.display='none'" class="text-gray-500 hover:text-gray-700">
+                    Cancel
+                </button>
             </div>
         </div>
-    </footer>
+    </div>
+
+    <div id="upgrade-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display:none;">
+        <div class="bg-white rounded-lg p-6 max-w-lg w-full mx-4">
+            <h2>Upgrade Your Plan</h2>
+            <p>Select your desired plan to unlock more features.</p>
+            <button onclick="document.getElementById('upgrade-modal').style.display='none'">Close</button>
+        </div>
+    </div>
+
 
     <script src="./script.js"></script>
     <script>
-        // Load navigation
-        fetch('./nav-contents.html')
-            .then(response => response.text())
-            .then(html => {
-                document.getElementById('navigation-bar-wrapper').innerHTML = html;
-                initializeNavigation();
-            });
-
-        // Initialize animations
         document.addEventListener('DOMContentLoaded', () => {
-            if (typeof setupAnimationObserver === 'function') {
-                setupAnimationObserver();
-            }
+            // Since we removed nav-contents.html loading, we call initializeApp directly
+            // The nav element is now embedded above for script.js to manage
+            initializeApp();
         });
     </script>
 </body>
