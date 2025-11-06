@@ -1,205 +1,246 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>C⁴AT³ Analyzer - AI Content Analysis Tool | Templet Solutions</title>
-    <meta content="AI-powered content analysis using the C⁴AT³ Framework. Get detailed scores, improvement recommendations, and optimize for AI citation." name="description"/>
-    <link href="favicon.ico" rel="icon" type="image/x-icon"/>
-    <link href="./style.css" rel="stylesheet"/>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>C⁴AT³ Analyzer — Optimize for AI Citation | Templet Solutions</title>
+  <meta name="description" content="Analyze content using the C⁴AT³ Framework. Get scores, recommendations, and optimize for AI citation. Free tier + paid plans."/>
+  <link rel="icon" href="favicon.ico" type="image/x-icon"/>
+  <link rel="stylesheet" href="./style.css"/>
+  <script defer src="./script.js"></script>
 </head>
 <body>
-    <header>
-        <div class="header-content-wrapper">
-            <div class="logo-h1">
-                <a href="/" title="Go to Home Page">
-                    <img alt="Templet Solutions Logo" src="./images/logo.png" style="max-height:180px; width:auto;"/>
-                </a>
-            </div>
-            <div id="navigation-bar-wrapper">
-                <nav class="main-nav">
-                    <ul class="nav-links">
-                        <li><a href="/" data-nav="home">Home</a></li>
-                        <li><a href="/pricing.html" data-nav="pricing">Pricing</a></li>
-                        <li class="auth-links">
-                            <a href="#" onclick="showLoginModal()" style="color: var(--ts-teal);">Login</a>
-                        </li>
-                    </ul>
-                </nav>
-            </div>
-        </div>
-    </header>
-    
-    <main>
-        <div id="landing-view">
-            <section class="hero" id="home">
-                <div class="container">
-                    <h1 class="animate-on-scroll">Analyze Your Content with the C⁴AT³ Framework</h1>
-                    <p class="animate-on-scroll">Get AI-powered content analysis, detailed scoring, and actionable recommendations to optimize for AI citation and search visibility.</p>
-                    <a class="hero-cta animate-on-scroll" href="#" onclick="showLoginModal()">Start Analyzing Content</a>
-                </div>
-            </section>
+  <!-- Header / Nav -->
+  <header class="site-header">
+    <div class="container header-row">
+      <a class="brand" href="/" aria-label="Templet Solutions Home">
+        <img src="./images/logo.png" alt="Templet Solutions" class="brand-logo">
+      </a>
 
-            <section class="features" id="features">
-                <div class="container">
-                    <div class="section-header">
-                        <h2 class="animate-on-scroll">Powerful Content Analysis</h2>
-                        <p class="animate-on-scroll">
-                            Our C⁴AT³ Analyzer provides comprehensive content evaluation using the same framework that drives AI Citation Optimization success.
-                        </p>
-                    </div>
-                    <div class="features-grid">
-                        <div class="feature-card animate-on-scroll">... Comprehensive C⁴AT³ Scoring ...</div>
-                        <div class="feature-card animate-on-scroll">... AI Citation Readiness ...</div>
-                        <div class="feature-card animate-on-scroll">... Actionable Recommendations ...</div>
-                    </div>
-                </div>
-            </section>
-
-            <section class="content-section" id="how-it-works">
-                <div class="container content-grid">
-                    <div class="content-text animate-on-scroll">
-                        <h2>How the C⁴AT³ Analyzer Works</h2>
-                        <p>Our analyzer uses advanced AI to evaluate your content against the same criteria that determine AI citation worthiness...</p>
-                        <a class="cta-button" href="#" onclick="showLoginModal()">Try the Analyzer</a>
-                    </div>
-                    <div class="content-image animate-on-scroll">
-                        <div style="width: 100%; height: 300px; background: linear-gradient(135deg, var(--ts-teal) 0%, var(--ts-medium-blue) 100%); border-radius: 15px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.2rem; box-shadow: 0 20px 40px rgba(0,0,0,0.1);">
-                            C⁴AT³ Framework Analysis
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <section class="content-section" id="pricing-overview">
-                ...
-                <a class="cta-button" href="pricing.html">View All Plans</a>
-                ...
-            </section>
-
-            <section class="lead-magnet" id="get-started">
-                <div class="container">
-                    <h2 class="animate-on-scroll">Ready to Optimize Your Content?</h2>
-                    <p class="animate-on-scroll">Start analyzing your content with our C⁴AT³ Framework and get actionable insights to improve your AI citation potential.</p>
-                    <a class="hero-cta animate-on-scroll" href="#" onclick="showLoginModal()">Start Analyzing Now</a>
-                </div>
-            </section>
-        </div>
-        
-        
-        <div id="dashboard-view" style="display:none;">
-            <section class="dashboard-hero">
-                <div class="container">
-                    <h1 id="welcome-message">Welcome Back!</h1>
-                    <p>Your comprehensive content analysis hub.</p>
-                </div>
-            </section>
-
-            <section class="stats-section">
-                <div class="container">
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <h3>Total Analyses</h3>
-                            <p id="total-analyses">--</p>
-                        </div>
-                        <div class="stat-card">
-                            <h3>Average C⁴AT³ Score</h3>
-                            <p id="avg-score">--</p>
-                        </div>
-                        <div class="stat-card">
-                            <h3>Current Tier</h3>
-                            <p id="user-tier">--</p>
-                        </div>
-                        <div class="stat-card usage-card">
-                            <h3>Monthly Usage</h3>
-                            <div class="usage-bar-wrapper">
-                                <div id="usage-bar" class="usage-bar" style="width: 0%;"></div>
-                            </div>
-                            <p id="usage-text">-- / -- remaining</p>
-                        </div>
-                    </div>
-                    <div id="usage-warning" class="warning-message" style="display:none;">
-                        <span id="warning-icon">⚠️</span>
-                        <span id="warning-text"></span>
-                        <button class="cta-button small-button" onclick="showUpgradeModal()">Upgrade Now</button>
-                        <button class="small-button" onclick="dismissWarning()">Dismiss</button>
-                    </div>
-                </div>
-            </section>
-
-            <section class="analysis-section">
-                <div class="container">
-                    <h2>Run a New Analysis</h2>
-                    <form id="analysis-form" class="analysis-form">
-                        <input type="url" id="content-url" placeholder="Enter URL to Analyze (e.g., https://example.com/article)" required>
-                        <select id="analysis-type" name="analysis_type">
-                            <option value="basic">Basic C⁴AT³ Score</option>
-                            <option value="deep">Deep Dive (Detailed Breakdown)</option>
-                            <option value="competitor">Competitor Comparison (Pro Only)</option>
-                        </select>
-                        <button type="submit" class="cta-button" id="analyze-button">Analyze Content</button>
-                    </form>
-                    <div id="analysis-result-display" style="margin-top: 20px;">
-                        </div>
-                </div>
-            </section>
-
-            <section class="history-section">
-                <div class="container">
-                    <h2>Recent Analysis History</h2>
-                    <table id="analysis-history-table">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>URL / Title</th>
-                                <th>Tier</th>
-                                <th>Score</th>
-                                <th>Grade</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="analysis-history-body">
-                            </tbody>
-                    </table>
-                </div>
-            </section>
-        </div>
-        
-    </main>
-
-    <footer>
-        ...
-    </footer>
-
-    <div id="auth-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display:none;">
-        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <div id="auth-forms">
-                </div>
-            <div class="text-center mt-4">
-                <button onclick="document.getElementById('auth-modal').style.display='none'" class="text-gray-500 hover:text-gray-700">
-                    Cancel
-                </button>
-            </div>
-        </div>
+      <nav class="main-nav">
+        <ul class="nav-links">
+          <li><a href="/" data-nav="home">Home</a></li>
+          <li><a href="#pricing" data-nav="pricing">Pricing</a></li>
+          <li><a href="./dashboard.html" data-nav="dashboard" class="auth-only" style="display:none;">Dashboard</a></li>
+          <li class="auth-cta">
+            <button id="loginButton" class="btn-link">Log in</button>
+            <button id="logoutButton" class="btn-link danger" style="display:none;">Log out</button>
+          </li>
+        </ul>
+      </nav>
     </div>
+  </header>
 
-    <div id="upgrade-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display:none;">
-        <div class="bg-white rounded-lg p-6 max-w-lg w-full mx-4">
-            <h2>Upgrade Your Plan</h2>
-            <p>Select your desired plan to unlock more features.</p>
-            <button onclick="document.getElementById('upgrade-modal').style.display='none'">Close</button>
-        </div>
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container hero-inner">
+      <h1>C⁴AT³ Analyzer</h1>
+      <p>Score your content for <strong>Credibility, Citation-worthiness, and Actionability</strong>—the traits AI systems actually cite.</p>
+      <div class="hero-actions">
+        <button class="btn btn-primary" id="getStartedBtn">Get started free</button>
+        <a href="#pricing" class="btn btn-outline">View pricing</a>
+      </div>
     </div>
+  </section>
 
+  <!-- Features -->
+  <section class="section">
+    <div class="container">
+      <div class="section-header">
+        <h2>Make AI cite you—on purpose</h2>
+        <p>Our analyzer uses the C⁴AT³ Framework to evaluate content the way modern AI systems do—beyond keywords and vibes.</p>
+      </div>
 
-    <script src="./script.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Since we removed nav-contents.html loading, we call initializeApp directly
-            // The nav element is now embedded above for script.js to manage
-            initializeApp();
-        });
-    </script>
+      <div class="grid features-grid">
+        <article class="card feature">
+          <div class="feature-icon">✓</div>
+          <h3>Full C⁴AT³ Scoring</h3>
+          <p>See your overall score and the dimension breakdown that actually moves visibility.</p>
+        </article>
+        <article class="card feature">
+          <div class="feature-icon">⚙️</div>
+          <h3>Actionable Fixes</h3>
+          <p>Targeted improvements prioritized by impact, not fluff. Change input → change outcome.</p>
+        </article>
+        <article class="card feature">
+          <div class="feature-icon">📈</div>
+          <h3>Progress Over Time</h3>
+          <p>Track how your content tightens up—then watch recognition follow.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing (Landing style) -->
+  <section class="section section-alt" id="pricing">
+    <div class="container">
+      <div class="section-header">
+        <h2>Pricing that nudges growth</h2>
+        <p>Start free. Upgrade when you need more throughput.</p>
+      </div>
+
+      <div class="grid pricing-grid">
+        <!-- Free -->
+        <article class="card price">
+          <h3>Free</h3>
+          <div class="price-amount">$0<span>/month</span></div>
+          <ul class="price-list">
+            <li>5 analyses / month</li>
+            <li>Overall C⁴AT³ score</li>
+            <li>1 generic improvement tip</li>
+          </ul>
+          <button class="btn btn-ghost" data-plan="free">Start free</button>
+        </article>
+
+        <!-- Starter -->
+        <article class="card price highlight">
+          <div class="badge">Popular</div>
+          <h3>Starter</h3>
+          <div class="price-amount">$12.99<span>/month</span></div>
+          <ul class="price-list">
+            <li>20 analyses / month</li>
+            <li>Dimension breakdown</li>
+            <li>Priority improvements</li>
+          </ul>
+          <button class="btn btn-primary" data-plan="starter">Choose Starter</button>
+        </article>
+
+        <!-- Professional -->
+        <article class="card price">
+          <h3>Professional</h3>
+          <div class="price-amount">$22.99<span>/month</span></div>
+          <ul class="price-list">
+            <li>60 analyses / month</li>
+            <li>Detailed criterion scores</li>
+            <li>Exportable reports</li>
+          </ul>
+          <button class="btn btn-primary" data-plan="professional">Choose Professional</button>
+        </article>
+
+        <!-- Pro -->
+        <article class="card price">
+          <h3>Pro</h3>
+          <div class="price-amount">$39.99<span>/month</span></div>
+          <ul class="price-list">
+            <li>150 analyses / month</li>
+            <li>Competitor comparison</li>
+            <li>Priority support</li>
+          </ul>
+          <button class="btn btn-primary" data-plan="pro">Choose Pro</button>
+        </article>
+      </div>
+
+      <!-- Inline “why this works” credibility band -->
+      <div class="band">
+        <p><strong>Designed for upgrades, not regrets:</strong> clear jumps 5→20→60→150, honest pricing, and a Professional tier that makes Pro feel sane—not silly.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="section">
+    <div class="container cta-center">
+      <h2>Ready to be the thing AI cites?</h2>
+      <p>Help the machine help you. Tight content. Transparent scoring. Measurable gains.</p>
+      <button class="btn btn-primary" id="ctaAnalyzeNow">Try the analyzer</button>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div>
+        <strong>Templet Solutions</strong><br/>
+        C⁴AT³ Framework • AICO
+      </div>
+      <ul class="footer-links">
+        <li><a href="/pricing.html">Pricing</a></li>
+        <li><a href="/terms.html">Terms</a></li>
+        <li><a href="/privacy.html">Privacy</a></li>
+      </ul>
+      <div class="footer-note">© <span id="year"></span> Templet Solutions LLC</div>
+    </div>
+  </footer>
+
+  <!-- Auth Modal -->
+  <dialog id="authModal" class="modal">
+    <form method="dialog" class="modal-card" id="authForm">
+      <div class="modal-head">
+        <h3 id="authTitle">Welcome</h3>
+        <button type="button" class="btn-icon" data-close>✕</button>
+      </div>
+
+      <div class="tabs">
+        <button type="button" class="tab active" data-tab="login">Log in</button>
+        <button type="button" class="tab" data-tab="signup">Sign up</button>
+      </div>
+
+      <div class="tab-panel active" data-panel="login">
+        <label class="field">
+          <span>Email</span>
+          <input type="email" id="loginEmail" autocomplete="email" required>
+        </label>
+        <label class="field">
+          <span>Password</span>
+          <input type="password" id="loginPassword" autocomplete="current-password" required>
+        </label>
+        <button type="button" class="btn btn-primary" id="loginSubmit">Log in</button>
+      </div>
+
+      <div class="tab-panel" data-panel="signup">
+        <label class="field">
+          <span>Email</span>
+          <input type="email" id="signupEmail" autocomplete="email" required>
+        </label>
+        <label class="field">
+          <span>Password</span>
+          <input type="password" id="signupPassword" autocomplete="new-password" required>
+        </label>
+        <button type="button" class="btn btn-primary" id="signupSubmit">Create account</button>
+      </div>
+
+      <p class="form-help" id="authHelp"></p>
+    </form>
+  </dialog>
+
+  <script>
+    // basic CTA wiring for modal + pricing
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    const openAuth = () => document.getElementById('authModal').showModal();
+    document.getElementById('getStartedBtn').addEventListener('click', openAuth);
+    document.getElementById('ctaAnalyzeNow').addEventListener('click', openAuth);
+    document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => authModal.close()));
+
+    // Tab switch
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        const panel = document.querySelector(`.tab-panel[data-panel="${tab.dataset.tab}"]`);
+        panel.classList.add('active');
+      });
+    });
+
+    // Pricing buttons
+    document.querySelectorAll('.price button').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const plan = btn.getAttribute('data-plan');
+        if (plan === 'free') {
+          // Push user to sign up if not authenticated; otherwise to dashboard
+          if (!window.C4AT3Auth.getToken()) {
+            openAuth();
+            // After signup success in script.js we’ll route to dashboard
+          } else {
+            window.location.href = './dashboard.html';
+          }
+        } else {
+          // Paid plans go straight to checkout with plan parameter
+          window.location.href = `./checkout.html?plan=${encodeURIComponent(plan)}`;
+        }
+      });
+    });
+  </script>
 </body>
 </html>
