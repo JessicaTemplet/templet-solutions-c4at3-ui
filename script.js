@@ -1,499 +1,794 @@
-// API Configuration - Connected to your Google Cloud Run backend
-const API_BASE_URL = 'https://api.templetsolutions.com';
+(function() {
+  const API_BASE = '';
+  const TOKEN_KEY = 'c4at3_token';
+  const USER_KEY = 'c4at3_user';
+  const HISTORY_KEY = 'c4at3_history';
 
-// Authentication state
-let currentUser = null;
+  let authModal;
+  let authHelp;
 
-// Authentication token management
-function getAuthToken() {
-    return localStorage.getItem('c4at3_token');
-}
+  const C4AT3Auth = (() => {
+    let token = null;
+    let user = null;
 
-function setAuthToken(token) {
-    localStorage.setItem('c4at3_token', token);
-}
-
-function removeAuthToken() {
-    localStorage.removeItem('c4at3_token');
-    localStorage.removeItem('c4at3_user');
-    currentUser = null;
-}
-
-function setCurrentUser(user) {
-    currentUser = user;
-    localStorage.setItem('c4at3_user', JSON.stringify(user));
-}
-
-function getCurrentUser() {
-    if (currentUser) return currentUser;
-    
-    const storedUser = localStorage.getItem('c4at3_user');
-    if (storedUser) {
-        currentUser = JSON.parse(storedUser);
-        return currentUser;
-    }
-    return null;
-}
-
-// ===============================================
-// *** SPA CHANGE: New Functions for View Management ***
-// ===============================================
-
-function showLandingView() {
-    // Show the landing/marketing content
-    document.getElementById('landing-view').style.display = 'block';
-    // Hide the application content
-    document.getElementById('dashboard-view').style.display = 'none';
-    // Optional: Update URL without reloading (cleaner navigation)
-    window.history.pushState({}, 'Home', '/');
-}
-
-function showDashboardView() {
-    const user = getCurrentUser();
-    
-    if (!user) {
-        // If not logged in, force back to landing and prompt login
-        showLandingView();
-        showLoginPrompt(); 
-        return;
+    function init() {
+      token = localStorage.getItem(TOKEN_KEY) || null;
+      const stored = localStorage.getItem(USER_KEY);
+      if (stored) {
+        try {
+          user = JSON.parse(stored);
+        } catch (_) {
+          user = null;
+        }
+      }
     }
 
-    // Hide the landing content
-    document.getElementById('landing-view').style.display = 'none';
-    // Show the application content
-    document.getElementById('dashboard-view').style.display = 'block';
-    
-    // Update URL without reloading
-    window.history.pushState({}, 'Dashboard', '/dashboard'); 
-    
-    // Initialize dashboard content and load data
-    initializeDashboard(); 
-}
-
-// ===============================================
-// Initialize Application - Updated for SPA
-// ===============================================
-function initializeApp() {
-    initializeNavigation();
-    
-    // Check if user is logged in
-    const user = getCurrentUser();
-    
-    // *** SPA CHANGE: Use content-swapping logic instead of URL checks ***
-    if (user) {
-        updateUIForLoggedInUser(user);
-        // If logged in, automatically show the dashboard view
-        showDashboardView(); 
-    } else {
-        updateUIForLoggedOutUser();
-        // If logged out, show the marketing/landing page view
-        showLandingView();
+    function setSession(newToken, newUser) {
+      token = newToken || null;
+      user = newUser || null;
+      if (token) {
+        localStorage.setItem(TOKEN_KEY, token);
+      } else {
+        localStorage.removeItem(TOKEN_KEY);
+      }
+      if (user) {
+        localStorage.setItem(USER_KEY, JSON.stringify(user));
+      } else {
+        localStorage.removeItem(USER_KEY);
+      }
     }
-    
-    // Removed old checks for:
-    // if (window.location.pathname.includes('dashboard.html')) { ... }
-    // if (window.location.pathname.includes('pricing.html')) { ... }
-    
-    setupAnimationObserver();
-}
 
-// Authentication Functions
-async function registerUser(email, password, tier = 'free') {
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                email: email,
-                password: password,
-                tier: tier
-            })
-        });
-        
+    function setUser(newUser) {
+      user = newUser || null;
+      if (user) {
+        localStorage.setItem(USER_KEY, JSON.stringify(user));
+      } else {
+        localStorage.removeItem(USER_KEY);
+      }
+    }
+
+    function clear() {
+      token = null;
+      user = null;
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
+    }
+
+    function getToken() {
+      return token;
+    }
+
+    function getUser() {
+      return user;
+    }
+
+    async function refreshUser() {
+      if (!token) return null;
+      try {
+        const response = await authedFetch('/api/auth/me');
         if (response.ok) {
-            const tokenData = await response.json();
-            setAuthToken(tokenData.access_token);
-            setCurrentUser({
-                id: tokenData.user_id,
-                email: email,
-                tier: tokenData.tier
-            });
-            return { success: true, user: currentUser };
-        } else {
-            const errorData = await response.json();
-            return { success: false, error: errorData.detail || 'Registration failed' };
+          const payload = await response.json();
+          const data = payload.data || payload;
+          setUser(data);
+          return data;
         }
-    } catch (error) {
-        console.error('Registration error:', error);
-        return { success: false, error: 'Network error during registration' };
+      } catch (_) {
+        // ignore network errors; caller can decide how to handle missing data
+      }
+      return user;
     }
-}
 
-async function loginUser(email, password) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                email: email,
-                password: password
-            })
-        });
-        
-        if (response.ok) {
-            const tokenData = await response.json();
-            setAuthToken(tokenData.access_token);
-            setCurrentUser({
-                id: tokenData.user_id,
-                email: email,
-                tier: tokenData.tier
-            });
-            
-            // Fetch complete user info
-            await fetchUserProfile();
-            
-            return { success: true, user: currentUser };
-        } else {
-            const errorData = await response.json();
-            return { success: false, error: errorData.detail || 'Login failed' };
+    function buildUrl(path) {
+      if (!path) return '';
+      if (/^https?:/i.test(path)) {
+        return path;
+      }
+      return `${API_BASE}${path}`;
+    }
+
+    function authedFetch(path, options = {}) {
+      const headers = new Headers(options.headers || {});
+      if (token) {
+        headers.set('Authorization', `Bearer ${token}`);
+      }
+      return fetch(buildUrl(path), { ...options, headers });
+    }
+
+    return {
+      init,
+      setSession,
+      setUser,
+      clear,
+      getToken,
+      getUser,
+      refreshUser,
+      authedFetch
+    };
+  })();
+
+  window.C4AT3Auth = C4AT3Auth;
+
+  document.addEventListener('DOMContentLoaded', initializeApp);
+
+  function initializeApp() {
+    C4AT3Auth.init();
+    setCurrentYear();
+    setupGlobalNav();
+    setupAuthModal();
+
+    const page = document.body.dataset.page || 'landing';
+    if (page === 'landing') {
+      initLandingPage();
+    } else if (page === 'dashboard') {
+      initDashboardPage();
+    } else if (page === 'checkout') {
+      initCheckoutPage();
+    }
+  }
+
+  function setCurrentYear() {
+    const yearEl = document.getElementById('year');
+    if (yearEl) {
+      yearEl.textContent = new Date().getFullYear();
+    }
+  }
+
+  function setupGlobalNav() {
+    const loginButton = document.getElementById('loginButton');
+    const logoutButton = document.getElementById('logoutButton');
+
+    if (loginButton) {
+      loginButton.addEventListener('click', () => openAuthModal('login'));
+    }
+
+    if (logoutButton) {
+      logoutButton.addEventListener('click', () => {
+        C4AT3Auth.clear();
+        syncAuthUI();
+        const page = document.body.dataset.page || 'landing';
+        if (page === 'dashboard') {
+          window.location.href = './index.html';
         }
-    } catch (error) {
-        console.error('Login error:', error);
-        return { success: false, error: 'Network error during login' };
+      });
     }
-}
 
-async function fetchUserProfile() {
-    const token = getAuthToken();
-    if (!token) return;
-    
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        
-        if (response.ok) {
-            const userData = await response.json();
-            setCurrentUser(userData);
-        }
-    } catch (error) {
-        console.error('Failed to fetch user profile:', error);
+    syncAuthUI();
+  }
+
+  function syncAuthUI() {
+    const hasToken = Boolean(C4AT3Auth.getToken());
+    const loginButton = document.getElementById('loginButton');
+    const logoutButton = document.getElementById('logoutButton');
+
+    if (loginButton) {
+      loginButton.style.display = hasToken ? 'none' : '';
     }
-}
-
-async function upgradeUserTier(newTier) {
-    const token = getAuthToken();
-    if (!token) return { success: false, error: 'Not authenticated' };
-    
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/auth/upgrade`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ tier: newTier })
-        });
-        
-        if (response.ok) {
-            const result = await response.json();
-            // Update local user data
-            currentUser.tier = newTier;
-            setCurrentUser(currentUser);
-            return { success: true, message: result.message };
-        } else {
-            const errorData = await response.json();
-            return { success: false, error: errorData.detail || 'Upgrade failed' };
-        }
-    } catch (error) {
-        console.error('Upgrade error:', error);
-        return { success: false, error: 'Network error during upgrade' };
+    if (logoutButton) {
+      logoutButton.style.display = hasToken ? '' : 'none';
     }
-}
 
-function logout() {
-    removeAuthToken();
-    updateUIForLoggedOutUser();
-    // *** SPA CHANGE: Use showLandingView() instead of page reload/redirect ***
-    showLandingView(); 
-}
-
-function updateUIForLoggedInUser(user) {
-    // Update navigation to show user info
-    const navLinks = document.querySelector('.nav-links');
-    if (navLinks) {
-        // Remove existing auth links
-        const existingAuthLinks = navLinks.querySelector('.auth-links');
-        if (existingAuthLinks) {
-            existingAuthLinks.remove();
-        }
-        
-        // Add user dropdown
-        const authSection = document.createElement('li');
-        authSection.className = 'dropdown auth-links';
-        authSection.innerHTML = `
-            <button class="dropdown-toggle" style="color: var(--ts-teal);">
-                👤 ${user.email}
-            </button>
-            <div class="dropdown-content">
-                <a href="#" onclick="showDashboardView()">Dashboard</a>
-                <a href="/profile.html">Profile</a>
-                <a href="/pricing.html">Upgrade Plan</a>
-                <a href="#" onclick="logout()">Logout</a>
-            </div>
-        `;
-        navLinks.appendChild(authSection);
-    }
-}
-
-function updateUIForLoggedOutUser() {
-    // Update navigation to show login/register
-    const navLinks = document.querySelector('.nav-links');
-    if (navLinks) {
-        const existingAuthLinks = navLinks.querySelector('.auth-links');
-        if (existingAuthLinks) {
-            existingAuthLinks.remove();
-        }
-        
-        const authSection = document.createElement('li');
-        authSection.className = 'auth-links';
-        authSection.innerHTML = `
-            <a href="#" onclick="showLoginModal()" style="color: var(--ts-teal);">Login</a>
-        `;
-        navLinks.appendChild(authSection);
-    }
-}
-
-// Modal Functions
-function showLoginModal() {
-    // *** SPA CHANGE: Use the pre-existing static modal structure in index.html ***
-    const modal = document.getElementById('auth-modal');
-    if (!modal) {
-        // Fallback for dynamically creating if not found (optional)
-        console.error("Auth modal element not found in HTML.");
-        return;
-    }
-    
-    modal.style.display = 'flex';
-    showLoginForm();
-}
-
-function showLoginForm() {
-    const authForms = document.getElementById('auth-forms');
-    if (!authForms) return;
-    
-    authForms.innerHTML = `
-        <h3 class="text-xl font-bold mb-4">Login to C⁴AT³ Analyzer</h3>
-        <form onsubmit="handleLoginSubmit(event)">
-            <div class="mb-4">
-                <label class="block text-gray-700 text-sm font-bold mb-2">Email</label>
-                <input type="email" id="login-email" required 
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-            </div>
-            <div class="mb-4">
-                <label class="block text-gray-700 text-sm font-bold mb-2">Password</label>
-                <input type="password" id="login-password" required
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-            </div>
-            <button type="submit" class="cta-button w-full">Login</button>
-        </form>
-        <div class="text-center mt-4">
-            <button onclick="showRegisterForm()" class="text-blue-600 hover:text-blue-800 text-sm">
-                Don't have an account? Register
-            </button>
-        </div>
-    `;
-}
-
-function showRegisterForm() {
-    const authForms = document.getElementById('auth-forms');
-    if (!authForms) return;
-    
-    authForms.innerHTML = `
-        <h3 class="text-xl font-bold mb-4">Register for C⁴AT³ Analyzer</h3>
-        <form onsubmit="handleRegisterSubmit(event)">
-            <div class="mb-4">
-                <label class="block text-gray-700 text-sm font-bold mb-2">Email</label>
-                <input type="email" id="register-email" required
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-            </div>
-            <div class="mb-4">
-                <label class="block text-gray-700 text-sm font-bold mb-2">Password</label>
-                <input type="password" id="register-password" required
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-            </div>
-            <button type="submit" class="cta-button w-full">Register</button>
-        </form>
-        <div class="text-center mt-4">
-            <button onclick="showLoginForm()" class="text-blue-600 hover:text-blue-800 text-sm">
-                Already have an account? Login
-            </button>
-        </div>
-    `;
-}
-
-async function handleLoginSubmit(event) {
-    event.preventDefault();
-    const email = document.getElementById('login-email').value;
-    const password = document.getElementById('login-password').value;
-    
-    const result = await loginUser(email, password);
-    
-    if (result.success) {
-        // Close modal
-        document.getElementById('auth-modal').style.display = 'none';
-        // *** SPA CHANGE: Switch to dashboard view instead of page reload ***
-        showDashboardView(); 
-    } else {
-        alert('Login failed: ' + result.error);
-    }
-}
-
-async function handleRegisterSubmit(event) {
-    event.preventDefault();
-    const email = document.getElementById('register-email').value;
-    const password = document.getElementById('register-password').value;
-    
-    const result = await registerUser(email, password);
-    
-    if (result.success) {
-        // Close modal
-        document.getElementById('auth-modal').style.display = 'none';
-        // *** SPA CHANGE: Switch to dashboard view instead of page reload ***
-        showDashboardView();
-    } else {
-        alert('Registration failed: ' + result.error);
-    }
-}
-
-// Navigation Functions
-function initializeNavigation() {
-    const dropdownToggles = document.querySelectorAll('.dropdown-toggle');
-    
-    dropdownToggles.forEach(toggle => {
-        toggle.addEventListener('click', function(e) {
-            e.preventDefault();
-            const dropdown = this.closest('.dropdown');
-            dropdown.classList.toggle('open');
-            
-            // Close other dropdowns
-            dropdownToggles.forEach(otherToggle => {
-                if (otherToggle !== this) {
-                    otherToggle.closest('.dropdown').classList.remove('open');
-                }
-            });
-        });
+    document.querySelectorAll('.auth-only').forEach((el) => {
+      el.style.display = hasToken ? '' : 'none';
     });
-    
-    // Close dropdowns when clicking outside
-    document.addEventListener('click', function(e) {
-        if (!e.target.closest('.dropdown')) {
-            dropdownToggles.forEach(toggle => {
-                toggle.closest('.dropdown').classList.remove('open');
-            });
-        }
+  }
+
+  function setupAuthModal() {
+    authModal = document.getElementById('authModal');
+    if (!authModal) return;
+
+    authHelp = document.getElementById('authHelp');
+
+    authModal.addEventListener('cancel', (event) => {
+      event.preventDefault();
+      closeAuthModal();
     });
-}
 
-// Dashboard Functions
-function initializeDashboard() {
-    const user = getCurrentUser();
-    if (!user) {
-        // *** SPA CHANGE: Ensure view is corrected if login state is lost ***
-        showLandingView();
-        showLoginPrompt();
-        return;
+    const closeButtons = authModal.querySelectorAll('[data-close]');
+    closeButtons.forEach((btn) => {
+      btn.addEventListener('click', closeAuthModal);
+    });
+
+    const tabs = authModal.querySelectorAll('.tab');
+    tabs.forEach((tab) => {
+      tab.addEventListener('click', () => switchAuthTab(tab.dataset.tab));
+    });
+
+    const loginSubmit = document.getElementById('loginSubmit');
+    const signupSubmit = document.getElementById('signupSubmit');
+
+    if (loginSubmit) {
+      loginSubmit.addEventListener('click', handleLoginSubmit);
     }
-    
-    // Welcome message update (assuming this function exists elsewhere)
-    document.getElementById('welcome-message').textContent = `Welcome Back, ${user.email.split('@')[0]}!`;
-    
-    loadUserUsage();
-    initializeAnalysisForm();
-    loadRecentAnalyses();
-}
+    if (signupSubmit) {
+      signupSubmit.addEventListener('click', handleSignupSubmit);
+    }
+  }
 
-async function loadUserUsage() {
+  function openAuthModal(mode = 'login') {
+    if (!authModal) {
+      window.location.href = './index.html';
+      return;
+    }
+
+    switchAuthTab(mode);
+    resetAuthMessage();
+    if (typeof authModal.showModal === 'function') {
+      authModal.showModal();
+    } else {
+      authModal.setAttribute('open', '');
+    }
+  }
+
+  function closeAuthModal() {
+    if (!authModal) return;
+    if (typeof authModal.close === 'function') {
+      authModal.close();
+    } else {
+      authModal.removeAttribute('open');
+    }
+  }
+
+  function switchAuthTab(mode) {
+    const tabs = authModal ? authModal.querySelectorAll('.tab') : [];
+    const panels = authModal ? authModal.querySelectorAll('.tab-panel') : [];
+
+    tabs.forEach((tab) => {
+      const isActive = tab.dataset.tab === mode;
+      tab.classList.toggle('active', isActive);
+      tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+    panels.forEach((panel) => {
+      const isActive = panel.dataset.panel === mode;
+      panel.classList.toggle('active', isActive);
+      panel.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+    });
+  }
+
+  function resetAuthMessage() {
+    if (!authHelp) return;
+    authHelp.textContent = '';
+    authHelp.classList.remove('error', 'success', 'loading');
+  }
+
+  async function handleLoginSubmit() {
+    const emailInput = document.getElementById('loginEmail');
+    const passwordInput = document.getElementById('loginPassword');
+    const submitButton = document.getElementById('loginSubmit');
+
+    if (!emailInput || !passwordInput || !submitButton) return;
+
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
+
+    if (!email || !password) {
+      setAuthMessage('Please enter your email and password.', 'error');
+      return;
+    }
+
+    setButtonLoading(submitButton, true, 'Logging in…');
+    setAuthMessage('Checking your credentials…', 'loading');
+
     try {
-        const token = getAuthToken();
-        if (!token) {
-            showLoginPrompt();
-            return;
-        }
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
 
-        const response = await fetch(`${API_BASE_URL}/api/analytics/usage`, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        if (response.status === 401) {
-            removeAuthToken();
-            showLoginPrompt();
-            return;
-        }
-        
-        if (response.ok) {
-            const usageData = await response.json();
-            updateUsageDisplay(usageData);
-            updateStats(usageData);
-        } else {
-            throw new Error('Failed to load usage data');
-        }
-        
+      const payload = await safeJson(response);
+      if (!response.ok || !payload?.success) {
+        const detail = payload?.detail || payload?.error || payload?.message || 'Login failed. Please try again.';
+        throw new Error(detail);
+      }
+
+      const data = payload.data || {};
+      C4AT3Auth.setSession(data.token, data.user);
+      await C4AT3Auth.refreshUser();
+      setAuthMessage('Success! Redirecting…', 'success');
+      syncAuthUI();
+      closeAuthModal();
+      routeAfterAuth();
     } catch (error) {
-        console.error('Error loading usage data:', error);
-        // Fallback for demo
-        const user = getCurrentUser();
-        const mockUsage = {
-            used: 4,
-            limit: user?.tier === 'free' ? 5 : user?.tier === 'paid' ? 20 : 100,
-            remaining: user?.tier === 'free' ? 1 : user?.tier === 'paid' ? 16 : 96,
-            percentage: user?.tier === 'free' ? 80 : user?.tier === 'paid' ? 20 : 4,
-            warning_level: user?.tier === 'free' ? 'warning_80' : 'normal',
-            message: user?.tier === 'free' ? 'Warning: 1 analysis remains this month.' : 'Usage is normal',
-            suggestion: user?.tier === 'free' ? 'You\'re approaching your monthly limit.' : '',
-            can_analyze: true
-        };
-        updateUsageDisplay(mockUsage);
-        updateStats(mockUsage);
+      setAuthMessage(error.message || 'Login failed. Please try again.', 'error');
+    } finally {
+      setButtonLoading(submitButton, false);
     }
-}
+  }
 
-// ... (rest of the dashboard functions from previous version remain the same)
-// NOTE: ALL functions called within the script (like updateUsageDisplay, 
-// updateStats, initializeAnalysisForm, loadRecentAnalyses) must be defined
-// above the final export block, but are omitted here for brevity.
+  async function handleSignupSubmit() {
+    const emailInput = document.getElementById('signupEmail');
+    const passwordInput = document.getElementById('signupPassword');
+    const submitButton = document.getElementById('signupSubmit');
 
-// ===============================================
-// Make functions globally available (for HTML events)
-// ===============================================
-window.dismissWarning = dismissWarning;
-window.showUpgradeModal = showUpgradeModal;
-window.initiateCheckout = initiateCheckout;
-window.initiateOneTimePurchase = initiateOneTimePurchase;
-window.logout = logout;
-window.showLoginModal = showLoginModal;
-window.showLoginForm = showLoginForm;
-window.showRegisterForm = showRegisterForm;
-window.handleLoginSubmit = handleLoginSubmit;
-window.handleRegisterSubmit = handleRegisterSubmit;
+    if (!emailInput || !passwordInput || !submitButton) return;
 
-// *** CRITICAL MISSING FUNCTIONS ADDED ***
-// These were causing the previous ReferenceErrors and are likely called by dashboard.html content
-window.showLoginPrompt = showLoginPrompt; 
-window.updateUsageDisplay = updateUsageDisplay; 
-window.updateStats = updateStats; 
-window.initializeAnalysisForm = initializeAnalysisForm; 
-window.loadRecentAnalyses = loadRecentAnalyses;
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
 
-// *** NEW SPA FUNCTIONS ADDED ***
-window.showDashboardView = showDashboardView;
-window.showLandingView = showLandingView;
+    if (!email || !password) {
+      setAuthMessage('Please enter your email and password.', 'error');
+      return;
+    }
+
+    setButtonLoading(submitButton, true, 'Creating account…');
+    setAuthMessage('Creating your account…', 'loading');
+
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      const payload = await safeJson(response);
+      if (!response.ok || !payload?.success) {
+        const detail = payload?.detail || payload?.error || payload?.message || 'Sign up failed. Please try again.';
+        throw new Error(detail);
+      }
+
+      const data = payload.data || {};
+      C4AT3Auth.setSession(data.token, data.user);
+      await C4AT3Auth.refreshUser();
+      setAuthMessage('Account created! Redirecting…', 'success');
+      syncAuthUI();
+      closeAuthModal();
+      routeAfterAuth();
+    } catch (error) {
+      setAuthMessage(error.message || 'Sign up failed. Please try again.', 'error');
+    } finally {
+      setButtonLoading(submitButton, false);
+    }
+  }
+
+  function setAuthMessage(message, state) {
+    if (!authHelp) return;
+    authHelp.textContent = message;
+    authHelp.classList.remove('error', 'success', 'loading');
+    if (state) {
+      authHelp.classList.add(state);
+    }
+  }
+
+  function routeAfterAuth() {
+    const page = document.body.dataset.page || 'landing';
+    if (page === 'dashboard') {
+      hydrateDashboard();
+    } else if (page === 'checkout') {
+      const loginNotice = document.getElementById('loginNotice');
+      const checkoutHelp = document.getElementById('checkoutHelp');
+      if (loginNotice) {
+        loginNotice.style.display = 'none';
+      }
+      if (checkoutHelp) {
+        checkoutHelp.textContent = 'You’re signed in. Start checkout when you’re ready.';
+        checkoutHelp.classList.remove('error', 'warning');
+        checkoutHelp.classList.add('success');
+      }
+    } else {
+      window.location.href = './dashboard.html';
+    }
+  }
+
+  function initLandingPage() {
+    const startButtons = [
+      document.getElementById('getStartedBtn'),
+      document.getElementById('ctaAnalyzeNow')
+    ];
+
+    startButtons.forEach((btn) => {
+      if (!btn) return;
+      btn.addEventListener('click', () => {
+        if (C4AT3Auth.getToken()) {
+          window.location.href = './dashboard.html';
+        } else {
+          openAuthModal('signup');
+        }
+      });
+    });
+
+    document.querySelectorAll('.price button').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const plan = btn.getAttribute('data-plan');
+        if (plan === 'free') {
+          if (C4AT3Auth.getToken()) {
+            window.location.href = './dashboard.html';
+          } else {
+            openAuthModal('signup');
+          }
+          return;
+        }
+        window.location.href = `./checkout.html?plan=${encodeURIComponent(plan || '')}`;
+      });
+    });
+  }
+
+  function initDashboardPage() {
+    if (!C4AT3Auth.getToken()) {
+      window.location.href = './index.html';
+      return;
+    }
+
+    const logoutCta = document.getElementById('dashboardLogout');
+    if (logoutCta) {
+      logoutCta.addEventListener('click', () => {
+        C4AT3Auth.clear();
+        syncAuthUI();
+        window.location.href = './index.html';
+      });
+    }
+
+    const analysisForm = document.getElementById('analysisForm');
+    if (analysisForm) {
+      analysisForm.addEventListener('submit', handleAnalysisSubmit);
+    }
+
+    hydrateDashboard();
+  }
+
+  async function hydrateDashboard() {
+    const user = await ensureUserProfile();
+    updateDashboardHeader(user);
+    await loadUsageSummary();
+    renderAnalysisHistory();
+  }
+
+  async function ensureUserProfile() {
+    const user = C4AT3Auth.getUser();
+    if (user) return user;
+    return C4AT3Auth.refreshUser();
+  }
+
+  function updateDashboardHeader(user) {
+    const greetingEl = document.getElementById('dashboardGreeting');
+    const tierEl = document.getElementById('userTier');
+
+    if (greetingEl) {
+      const name = user?.email ? user.email.split('@')[0] : 'there';
+      greetingEl.textContent = `Welcome back, ${name}!`;
+    }
+
+    if (tierEl) {
+      tierEl.textContent = user?.tier ? user.tier : 'free';
+    }
+  }
+
+  async function loadUsageSummary() {
+    const usageStatus = document.getElementById('usageStatus');
+    const usageProgress = document.getElementById('usageProgress');
+
+    if (usageStatus) {
+      usageStatus.textContent = 'Loading usage…';
+      usageStatus.dataset.state = 'loading';
+    }
+
+    try {
+      const response = await C4AT3Auth.authedFetch('/api/analytics/usage');
+      if (response.ok) {
+        const payload = await response.json();
+        const data = payload.data || payload;
+        updateUsageDisplay(data);
+        return;
+      }
+
+      if (response.status === 404) {
+        throw new Error('Usage tracking is not enabled yet.');
+      }
+
+      const payload = await safeJson(response);
+      const detail = payload?.detail || payload?.error || 'Unable to load usage data.';
+      throw new Error(detail);
+    } catch (error) {
+      const fallback = buildUsageFallback();
+      updateUsageDisplay(fallback, error.message);
+    } finally {
+      if (usageProgress) {
+        usageProgress.classList.add('ready');
+      }
+    }
+  }
+
+  function buildUsageFallback() {
+    const tier = (C4AT3Auth.getUser()?.tier || 'free').toLowerCase();
+    const limits = { free: 5, starter: 20, professional: 60, pro: 150 };
+    const limit = limits[tier] || 5;
+    return {
+      used: 0,
+      remaining: limit,
+      limit
+    };
+  }
+
+  function updateUsageDisplay(data, message) {
+    const usageStatus = document.getElementById('usageStatus');
+    const usageProgress = document.getElementById('usageProgress');
+
+    if (!usageStatus || !usageProgress) return;
+
+    const used = Number.isFinite(data?.used) ? data.used : 0;
+    const limit = Number.isFinite(data?.limit) ? data.limit : used + (data?.remaining || 0) || 0;
+    const remaining = Number.isFinite(data?.remaining) ? data.remaining : Math.max(limit - used, 0);
+    const percentage = limit > 0 ? Math.min(Math.round((used / limit) * 100), 100) : 0;
+
+    usageProgress.style.setProperty('--usage-progress', `${percentage}%`);
+    const usedEl = usageProgress.querySelector('[data-used]');
+    const limitEl = usageProgress.querySelector('[data-limit]');
+    const remainingEl = usageProgress.querySelector('[data-remaining]');
+    if (usedEl) usedEl.textContent = used;
+    if (limitEl) limitEl.textContent = limit || '—';
+    if (remainingEl) remainingEl.textContent = remaining;
+
+    if (message) {
+      usageStatus.textContent = message;
+      usageStatus.dataset.state = 'warning';
+    } else {
+      usageStatus.textContent = remaining > 0
+        ? `${remaining} analysis${remaining === 1 ? '' : 'es'} remaining this cycle.`
+        : 'You have reached your plan limit for this cycle.';
+      usageStatus.dataset.state = remaining > 0 ? 'success' : 'error';
+    }
+  }
+
+  async function handleAnalysisSubmit(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const urlInput = document.getElementById('analysisUrl');
+    const typeInput = document.getElementById('analysisType');
+    const statusEl = document.getElementById('analysisStatus');
+    const resultEl = document.getElementById('analysisResult');
+    const scoreEl = document.getElementById('analysisScore');
+    const gradeEl = document.getElementById('analysisGrade');
+
+    if (!urlInput || !statusEl || !resultEl || !scoreEl || !gradeEl) return;
+
+    const url = urlInput.value.trim();
+    if (!url) {
+      statusEl.textContent = 'Please provide a URL to analyze.';
+      statusEl.dataset.state = 'error';
+      return;
+    }
+
+    const submitButton = form.querySelector('button[type="submit"]');
+    setButtonLoading(submitButton, true, 'Analyzing…');
+    statusEl.textContent = 'Analyzing your content…';
+    statusEl.dataset.state = 'loading';
+    resultEl.hidden = true;
+
+    try {
+      const response = await C4AT3Auth.authedFetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url,
+          analysis_type: typeInput ? typeInput.value : 'standard'
+        })
+      });
+
+      const payload = await safeJson(response);
+      if (!response.ok) {
+        const detail = payload?.detail || payload?.error || payload?.message || 'Analysis failed. Please try again.';
+        throw new Error(detail);
+      }
+
+      const data = payload.data || payload;
+      const score = Number.isFinite(data.score) ? Math.round(data.score) : '—';
+      const grade = data.grade || '—';
+
+      scoreEl.textContent = score;
+      gradeEl.textContent = grade;
+      resultEl.hidden = false;
+
+      statusEl.textContent = 'Analysis complete.';
+      statusEl.dataset.state = 'success';
+
+      saveAnalysisToHistory({
+        url,
+        score: Number.isFinite(data.score) ? data.score : null,
+        grade,
+        analysis_type: typeInput ? typeInput.value : 'standard',
+        completed_at: new Date().toISOString()
+      });
+      renderAnalysisHistory();
+    } catch (error) {
+      statusEl.textContent = error.message || 'Analysis failed. Please try again.';
+      statusEl.dataset.state = 'error';
+    } finally {
+      setButtonLoading(submitButton, false);
+    }
+  }
+
+  function renderAnalysisHistory() {
+    const list = document.getElementById('recentAnalyses');
+    if (!list) return;
+
+    list.innerHTML = '';
+    const user = C4AT3Auth.getUser();
+    if (!user) {
+      const li = document.createElement('li');
+      li.textContent = 'Log in to see your recent analyses.';
+      li.className = 'muted';
+      list.appendChild(li);
+      return;
+    }
+
+    const history = getHistoryForUser(user);
+    if (!history.length) {
+      const li = document.createElement('li');
+      li.textContent = 'No analyses yet. Run your first analysis to see results here.';
+      li.className = 'muted';
+      list.appendChild(li);
+      return;
+    }
+
+    history.forEach((entry) => {
+      const li = document.createElement('li');
+      const main = document.createElement('div');
+      main.className = 'history-main';
+
+      const grade = document.createElement('span');
+      grade.className = 'history-grade';
+      grade.textContent = entry.grade || '—';
+
+      const score = document.createElement('span');
+      score.className = 'history-score';
+      const points = Number.isFinite(entry.score) ? `${Math.round(entry.score)} pts` : '—';
+      score.textContent = points;
+
+      main.append(grade, score);
+
+      const meta = document.createElement('div');
+      meta.className = 'history-meta';
+      meta.textContent = new Date(entry.completed_at).toLocaleString();
+
+      const url = document.createElement('div');
+      url.className = 'history-url';
+      url.textContent = entry.url || '';
+
+      li.append(main, meta, url);
+      list.appendChild(li);
+    });
+  }
+
+  function getHistoryStore() {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    if (!raw) return {};
+    try {
+      const parsed = JSON.parse(raw);
+      return typeof parsed === 'object' && parsed ? parsed : {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  function saveHistoryStore(store) {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(store));
+  }
+
+  function getHistoryForUser(user) {
+    const store = getHistoryStore();
+    const key = user?.id || user?.email;
+    if (!key) return [];
+    return Array.isArray(store[key]) ? store[key] : [];
+  }
+
+  function saveAnalysisToHistory(entry) {
+    const user = C4AT3Auth.getUser();
+    const key = user?.id || user?.email;
+    if (!key) return;
+
+    const store = getHistoryStore();
+    const list = Array.isArray(store[key]) ? store[key] : [];
+    list.unshift(entry);
+    store[key] = list.slice(0, 5);
+    saveHistoryStore(store);
+  }
+
+  function initCheckoutPage() {
+    const params = new URLSearchParams(window.location.search);
+    const plan = (params.get('plan') || '').toLowerCase();
+    const planIntro = document.getElementById('planIntro');
+    const summaryPlan = document.getElementById('summaryPlan');
+    const summaryUses = document.getElementById('summaryUses');
+    const summaryPrice = document.getElementById('summaryPrice');
+    const checkoutHelp = document.getElementById('checkoutHelp');
+    const checkoutButton = document.getElementById('checkoutStart');
+    const loginNotice = document.getElementById('loginNotice');
+    const checkoutLogin = document.getElementById('checkoutLogin');
+
+    const catalogue = {
+      starter: { name: 'Starter', uses: 20, price: '$12.99/mo', code: 'starter' },
+      professional: { name: 'Professional', uses: 60, price: '$22.99/mo', code: 'professional' },
+      pro: { name: 'Pro', uses: 150, price: '$39.99/mo', code: 'pro' }
+    };
+
+    const selected = catalogue[plan];
+
+    if (!selected) {
+      if (planIntro) planIntro.textContent = 'No plan selected.';
+      if (checkoutButton) checkoutButton.disabled = true;
+    } else {
+      if (summaryPlan) summaryPlan.textContent = selected.name;
+      if (summaryUses) summaryUses.textContent = `${selected.uses}`;
+      if (summaryPrice) summaryPrice.textContent = selected.price;
+      if (planIntro) planIntro.textContent = 'You’re checking out with:';
+    }
+
+    if (!C4AT3Auth.getToken()) {
+      if (loginNotice) loginNotice.style.display = '';
+    }
+
+    if (checkoutLogin) {
+      checkoutLogin.addEventListener('click', () => openAuthModal('login'));
+    }
+
+    if (checkoutButton) {
+      checkoutButton.addEventListener('click', async () => {
+        if (!selected) return;
+
+        if (!C4AT3Auth.getToken()) {
+          if (checkoutHelp) {
+            checkoutHelp.textContent = 'Please log in or create an account before continuing to checkout.';
+            checkoutHelp.classList.add('error');
+          }
+          openAuthModal('signup');
+          return;
+        }
+
+        setButtonLoading(checkoutButton, true, 'Connecting…');
+        if (checkoutHelp) {
+          checkoutHelp.classList.remove('error', 'success', 'warning');
+          checkoutHelp.textContent = 'Attempting to start checkout…';
+        }
+
+        try {
+          const response = await C4AT3Auth.authedFetch('/api/billing/create-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ plan: selected.code })
+          });
+
+          const payload = await safeJson(response);
+          if (response.ok && payload?.url) {
+            window.location.href = payload.url;
+            return;
+          }
+
+          throw new Error('Billing is not enabled yet. Our team will reach out to complete your upgrade.');
+        } catch (error) {
+          if (checkoutHelp) {
+            checkoutHelp.textContent = error.message || 'Billing is not enabled yet. Our team will reach out to complete your upgrade.';
+            checkoutHelp.classList.add('warning');
+          }
+        } finally {
+          setButtonLoading(checkoutButton, false);
+        }
+      });
+    }
+  }
+
+  function setButtonLoading(button, isLoading, loadingLabel) {
+    if (!button) return;
+    if (isLoading) {
+      if (!button.dataset.originalText) {
+        button.dataset.originalText = button.textContent;
+      }
+      if (loadingLabel) {
+        button.textContent = loadingLabel;
+      }
+      button.disabled = true;
+    } else {
+      if (button.dataset.originalText) {
+        button.textContent = button.dataset.originalText;
+        delete button.dataset.originalText;
+      }
+      button.disabled = false;
+    }
+  }
+
+  async function safeJson(response) {
+    try {
+      return await response.json();
+    } catch (_) {
+      return null;
+    }
+  }
+})();
