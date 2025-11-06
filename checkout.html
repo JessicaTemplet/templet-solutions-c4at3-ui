@@ -8,27 +8,30 @@
   <link rel="stylesheet" href="./style.css"/>
   <script defer src="./script.js"></script>
 </head>
-<body>
+<body data-page="checkout">
   <header class="site-header">
     <div class="container header-row">
-      <a class="brand" href="/" aria-label="Templet Solutions Home">
-        <img src="./images/logo.png" alt="Templet Solutions" class="brand-logo">
+      <a class="brand" href="./" aria-label="Templet Solutions Home">
+        <img src="./images/logo.png" alt="Templet Solutions" class="brand-logo"/>
       </a>
-      <nav class="main-nav">
+      <nav class="main-nav" aria-label="Primary navigation">
         <ul class="nav-links">
-          <li><a href="/" data-nav="home">Home</a></li>
-          <li><a href="/#pricing" data-nav="pricing">Pricing</a></li>
-          <li><a href="./dashboard.html">Dashboard</a></li>
-          <li><button id="logoutButtonCk" class="btn-link danger" style="display:none;">Log out</button></li>
+          <li><a href="./" data-nav="home">Home</a></li>
+          <li><a href="./#pricing" data-nav="pricing">Pricing</a></li>
+          <li class="auth-only" style="display:none;"><a href="./dashboard.html" data-nav="dashboard">Dashboard</a></li>
+          <li class="nav-actions">
+            <button id="loginButton" class="btn-link">Log in</button>
+            <button id="logoutButton" class="btn-link danger" style="display:none;">Log out</button>
+          </li>
         </ul>
       </nav>
     </div>
   </header>
 
-  <main class="section">
+  <main class="section" id="mainContent">
     <div class="container">
       <div class="card checkout">
-        <h2>Checkout</h2>
+        <h1>Checkout</h1>
         <p id="planIntro" class="muted">Preparing your plan…</p>
 
         <div class="summary">
@@ -38,15 +41,15 @@
         </div>
 
         <div class="notice" id="loginNotice" style="display:none;">
-          You’ll need an account before checkout. <a href="/#pricing">Create one here</a>.
+          You’ll need an account before checkout. <button type="button" class="btn-link" id="checkoutLogin">Log in or sign up</button>.
         </div>
 
         <div class="actions">
           <button class="btn btn-primary" id="checkoutStart">Start checkout</button>
-          <a class="btn btn-ghost" href="/#pricing">Back to pricing</a>
+          <a class="btn btn-ghost" href="./#pricing">Back to pricing</a>
         </div>
 
-        <p class="small muted" id="checkoutHelp"></p>
+        <p class="status-message" id="checkoutHelp" role="status" aria-live="polite"></p>
       </div>
     </div>
   </main>
@@ -57,83 +60,44 @@
     </div>
   </footer>
 
-  <script>
-    document.getElementById('year').textContent = new Date().getFullYear();
-    const params = new URLSearchParams(window.location.search);
-    const plan = (params.get('plan') || '').toLowerCase();
+  <dialog id="authModal" class="modal">
+    <form method="dialog" class="modal-card" id="authForm">
+      <div class="modal-head">
+        <h3 id="authTitle">Welcome</h3>
+        <button type="button" class="btn-icon" data-close aria-label="Close authentication modal">✕</button>
+      </div>
 
-    const catalogue = {
-      starter: { name: 'Starter', uses: 20, price: '$12.99/mo', code: 'starter' },
-      professional: { name: 'Professional', uses: 60, price: '$22.99/mo', code: 'professional' },
-      pro: { name: 'Pro', uses: 150, price: '$39.99/mo', code: 'pro' }
-    };
+      <div class="tabs" role="tablist">
+        <button type="button" class="tab active" data-tab="login" role="tab" aria-selected="true">Log in</button>
+        <button type="button" class="tab" data-tab="signup" role="tab" aria-selected="false">Sign up</button>
+      </div>
 
-    const selected = catalogue[plan];
-    const loginNotice = document.getElementById('loginNotice');
+      <div class="tab-panel active" data-panel="login" role="tabpanel">
+        <label class="field">
+          <span>Email</span>
+          <input type="email" id="loginEmail" autocomplete="email" required/>
+        </label>
+        <label class="field">
+          <span>Password</span>
+          <input type="password" id="loginPassword" autocomplete="current-password" required/>
+        </label>
+        <button type="button" class="btn btn-primary" id="loginSubmit">Log in</button>
+      </div>
 
-    if (!selected) {
-      document.getElementById('planIntro').textContent = 'No plan selected.';
-      document.getElementById('checkoutStart').disabled = true;
-    } else {
-      document.getElementById('summaryPlan').textContent = selected.name;
-      document.getElementById('summaryUses').textContent = `${selected.uses}`;
-      document.getElementById('summaryPrice').textContent = selected.price;
-      document.getElementById('planIntro').textContent = 'You’re checking out with:';
-    }
+      <div class="tab-panel" data-panel="signup" role="tabpanel" aria-hidden="true">
+        <label class="field">
+          <span>Email</span>
+          <input type="email" id="signupEmail" autocomplete="email" required/>
+        </label>
+        <label class="field">
+          <span>Password</span>
+          <input type="password" id="signupPassword" autocomplete="new-password" required/>
+        </label>
+        <button type="button" class="btn btn-primary" id="signupSubmit">Create account</button>
+      </div>
 
-    // Show logout if authed
-    if (window.C4AT3Auth.getToken()) {
-      document.getElementById('logoutButtonCk').style.display = '';
-      document.getElementById('logoutButtonCk').addEventListener('click', () => {
-        window.C4AT3Auth.clear();
-        window.location.reload();
-      });
-    } else {
-      loginNotice.style.display = '';
-    }
-
-    document.getElementById('checkoutStart').addEventListener('click', async () => {
-      if (!selected) return;
-
-      // Require auth first
-      if (!window.C4AT3Auth.getToken()) {
-        document.getElementById('checkoutHelp').textContent = 'Please create an account or log in before checkout.';
-        return;
-      }
-
-      // Create backend session -> redirect URL (if available)
-      try {
-        const r = await window.C4AT3Auth.authedFetch('/api/billing/create-session', {
-          method: 'POST',
-          headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({ plan: selected.code })
-        });
-
-        if (r.ok) {
-          const data = await r.json();
-          if (data.url) {
-            window.location.href = data.url; // e.g., Stripe Checkout
-            return;
-          }
-        }
-
-        // Fallback: if no billing route yet, just soft-upgrade and route to dashboard.
-        const up = await window.C4AT3Auth.authedFetch('/api/users/upgrade', {
-          method: 'POST',
-          headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({ tier: selected.code })
-        });
-
-        if (up.ok) {
-          window.location.href = './dashboard.html';
-        } else {
-          document.getElementById('checkoutHelp').textContent = 'Checkout endpoint unavailable. Ask support to enable billing.';
-        }
-
-      } catch (err) {
-        document.getElementById('checkoutHelp').textContent = 'Network or server error starting checkout.';
-      }
-    });
-  </script>
+      <p class="form-help" id="authHelp" role="status" aria-live="polite"></p>
+    </form>
+  </dialog>
 </body>
 </html>
