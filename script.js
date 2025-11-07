@@ -1,11 +1,12 @@
 (function() {
-  const API_BASE = '';
+  const API_BASE_URL = window.API_BASE_URL || 'https://ubiquitous-parakeet-jjwwjr64x44j3g7x-8000.app.github.dev';
   const TOKEN_KEY = 'c4at3_token';
   const USER_KEY = 'c4at3_user';
   const HISTORY_KEY = 'c4at3_history';
 
   let authModal;
   let authHelp;
+  const wiredCheckoutButtons = new WeakSet();
 
   const C4AT3Auth = (() => {
     let token = null;
@@ -83,7 +84,7 @@
       if (/^https?:/i.test(path)) {
         return path;
       }
-      return `${API_BASE}${path}`;
+      return `${API_BASE_URL}${path}`;
     }
 
     function authedFetch(path, options = {}) {
@@ -106,15 +107,186 @@
     };
   })();
 
-  window.C4AT3Auth = C4AT3Auth;
+  function initAuth() {
+    C4AT3Auth.init();
+  }
+
+  function getAuthToken() {
+    return C4AT3Auth.getToken();
+  }
+
+  function setAuthToken(token, user) {
+    C4AT3Auth.setSession(token, user ?? C4AT3Auth.getUser());
+  }
+
+  function removeAuthToken() {
+    C4AT3Auth.clear();
+  }
+
+  function getCurrentUser() {
+    return C4AT3Auth.getUser();
+  }
+
+  async function refreshCurrentUser() {
+    return C4AT3Auth.refreshUser();
+  }
+
+  function authedFetch(path, options) {
+    return C4AT3Auth.authedFetch(path, options);
+  }
+
+  function showLoginPrompt() {
+    openAuthModal('login');
+  }
+
+  function ensureInlineAlertContainer(targetElement) {
+    if (targetElement) {
+      let container = targetElement.closest('[data-inline-container]')?.querySelector('[data-inline-alert]');
+      if (!container) {
+        const host = targetElement.closest('[data-inline-container]') || targetElement.parentElement;
+        if (host) {
+          container = document.createElement('div');
+          container.dataset.inlineAlert = 'true';
+          container.setAttribute('role', 'alert');
+          host.insertBefore(container, host.firstChild);
+        }
+      }
+      if (container) {
+        styleInlineAlert(container);
+        return container;
+      }
+    }
+
+    let container = document.getElementById('inlineAlert');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'inlineAlert';
+      container.setAttribute('role', 'alert');
+      styleInlineAlert(container);
+      const main = document.querySelector('main') || document.body;
+      main.prepend(container);
+    }
+    return container;
+  }
+
+  function styleInlineAlert(el) {
+    el.classList.add('inline-alert');
+    el.style.display = 'none';
+    el.style.padding = '0.75rem 1rem';
+    el.style.margin = '0.75rem auto';
+    el.style.borderRadius = '0.75rem';
+    el.style.maxWidth = '640px';
+    el.style.backgroundColor = '#fee2e2';
+    el.style.color = '#7f1d1d';
+    el.style.fontWeight = '500';
+    el.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)';
+    return el;
+  }
+
+  function clearInlineError(targetElement) {
+    const container = targetElement
+      ? targetElement.closest('[data-inline-container]')?.querySelector('[data-inline-alert]')
+      : document.getElementById('inlineAlert');
+    if (container) {
+      container.style.display = 'none';
+      container.textContent = '';
+    }
+  }
+
+  function showInlineError(message, targetElement) {
+    const container = ensureInlineAlertContainer(targetElement);
+    container.textContent = message;
+    container.style.display = 'block';
+  }
+
+  function handleInvalidSession({ trigger, helpElement }) {
+    removeAuthToken();
+    syncAuthUI();
+    if (helpElement) {
+      helpElement.textContent = 'Your session has expired. Please log in again.';
+      helpElement.classList.add('error');
+      helpElement.style.display = '';
+    } else {
+      showInlineError('Your session has expired. Please log in again.', trigger);
+    }
+    showLoginPrompt();
+  }
+
+  async function handleCheckout(tier, options = {}) {
+    const normalizedTier = String(tier || '').toLowerCase();
+    if (!normalizedTier) return;
+
+    const helpElement = options.helpElement || null;
+    const trigger = options.trigger || null;
+
+    if (helpElement) {
+      helpElement.classList.remove('error', 'success', 'warning');
+      helpElement.textContent = '';
+      helpElement.style.display = '';
+    } else {
+      clearInlineError(trigger);
+    }
+
+    const token = getAuthToken();
+    if (!token) {
+      if (helpElement) {
+        helpElement.textContent = 'Please sign in to continue to checkout.';
+        helpElement.classList.add('error');
+        helpElement.style.display = '';
+      } else {
+        showInlineError('Please sign in to continue to checkout.', trigger);
+      }
+      showLoginPrompt();
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/billing/checkout/${normalizedTier}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (response.status === 401) {
+        handleInvalidSession({ trigger, helpElement });
+        return;
+      }
+
+      const data = await safeJson(response);
+      if (response.ok && data?.success && data?.data?.checkout_url) {
+        window.location.href = data.data.checkout_url;
+        return;
+      }
+
+      const message = data?.error || data?.message || 'Checkout failed. Please try again.';
+      if (helpElement) {
+        helpElement.textContent = message;
+        helpElement.classList.add('error');
+        helpElement.style.display = '';
+      } else {
+        showInlineError(message, trigger);
+      }
+    } catch (error) {
+      const fallback = error?.message || 'Checkout failed. Please try again.';
+      if (helpElement) {
+        helpElement.textContent = fallback;
+        helpElement.classList.add('error');
+        helpElement.style.display = '';
+      } else {
+        showInlineError(fallback, trigger);
+      }
+    }
+  }
 
   document.addEventListener('DOMContentLoaded', initializeApp);
 
   function initializeApp() {
-    C4AT3Auth.init();
+    initAuth();
     setCurrentYear();
     setupGlobalNav();
     setupAuthModal();
+    setupCheckoutTriggers();
 
     const page = document.body.dataset.page || 'landing';
     if (page === 'landing') {
@@ -143,7 +315,7 @@
 
     if (logoutButton) {
       logoutButton.addEventListener('click', () => {
-        C4AT3Auth.clear();
+        removeAuthToken();
         syncAuthUI();
         const page = document.body.dataset.page || 'landing';
         if (page === 'dashboard') {
@@ -156,7 +328,7 @@
   }
 
   function syncAuthUI() {
-    const hasToken = Boolean(C4AT3Auth.getToken());
+    const hasToken = Boolean(getAuthToken());
     const loginButton = document.getElementById('loginButton');
     const logoutButton = document.getElementById('logoutButton');
 
@@ -202,6 +374,75 @@
     if (signupSubmit) {
       signupSubmit.addEventListener('click', handleSignupSubmit);
     }
+  }
+
+  function setupCheckoutTriggers() {
+    const attach = (button, tier) => {
+      const normalized = String(tier || '').toLowerCase();
+      if (!button || !normalized || wiredCheckoutButtons.has(button)) return;
+
+      const host = button.closest('[data-inline-container]') || button.parentElement;
+      if (host && !host.hasAttribute('data-inline-container')) {
+        host.setAttribute('data-inline-container', 'true');
+      }
+
+      button.addEventListener('click', (event) => {
+        event.preventDefault();
+        handleCheckout(normalized, { trigger: button });
+      });
+      wiredCheckoutButtons.add(button);
+    };
+
+    const configured = [
+      { selector: '#start-free-btn', tier: 'free' },
+      { selector: '#starter-btn', tier: 'starter' },
+      { selector: '#professional-btn', tier: 'professional' },
+      { selector: '#pro-btn', tier: 'pro' }
+    ];
+
+    configured.forEach(({ selector, tier }) => {
+      const button = document.querySelector(selector);
+      if (button) attach(button, tier);
+    });
+
+    document.querySelectorAll('button[onclick*="initiateCheckout"]').forEach((button) => {
+      if (!button.dataset.checkoutTier) {
+        const attr = button.getAttribute('onclick');
+        const match = attr && attr.match(/initiateCheckout\(['\"]([^'\"]+)['\"]/);
+        if (match) {
+          button.dataset.checkoutTier = match[1];
+          button.removeAttribute('onclick');
+        }
+      }
+      attach(button, button.dataset.checkoutTier);
+    });
+
+    document.querySelectorAll('[data-checkout-tier]').forEach((button) => {
+      attach(button, button.dataset.checkoutTier);
+    });
+
+    document.querySelectorAll('[data-plan]').forEach((button) => {
+      attach(button, button.getAttribute('data-plan'));
+    });
+
+    document.querySelectorAll('button[onclick*="initiateOneTimePurchase"]').forEach((button) => {
+      if (!wiredCheckoutButtons.has(button)) {
+        const host = button.closest('[data-inline-container]') || button.parentElement;
+        if (host && !host.hasAttribute('data-inline-container')) {
+          host.setAttribute('data-inline-container', 'true');
+        }
+
+        button.addEventListener('click', (event) => {
+          event.preventDefault();
+          handleCheckout('one-time', { trigger: button });
+        });
+        wiredCheckoutButtons.add(button);
+        button.removeAttribute('onclick');
+      }
+    });
+
+    window.initiateCheckout = (tier) => handleCheckout(tier);
+    window.initiateOneTimePurchase = () => handleCheckout('one-time');
   }
 
   function openAuthModal(mode = 'login') {
@@ -269,7 +510,7 @@
     setAuthMessage('Checking your credentials…', 'loading');
 
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -282,8 +523,8 @@
       }
 
       const data = payload.data || {};
-      C4AT3Auth.setSession(data.token, data.user);
-      await C4AT3Auth.refreshUser();
+      setAuthToken(data.token, data.user);
+      await refreshCurrentUser();
       setAuthMessage('Success! Redirecting…', 'success');
       syncAuthUI();
       closeAuthModal();
@@ -314,7 +555,7 @@
     setAuthMessage('Creating your account…', 'loading');
 
     try {
-      const response = await fetch('/api/auth/register', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -327,8 +568,8 @@
       }
 
       const data = payload.data || {};
-      C4AT3Auth.setSession(data.token, data.user);
-      await C4AT3Auth.refreshUser();
+      setAuthToken(data.token, data.user);
+      await refreshCurrentUser();
       setAuthMessage('Account created! Redirecting…', 'success');
       syncAuthUI();
       closeAuthModal();
@@ -378,7 +619,7 @@
     startButtons.forEach((btn) => {
       if (!btn) return;
       btn.addEventListener('click', () => {
-        if (C4AT3Auth.getToken()) {
+        if (getAuthToken()) {
           window.location.href = './dashboard.html';
         } else {
           openAuthModal('signup');
@@ -387,23 +628,19 @@
     });
 
     document.querySelectorAll('.price button').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const plan = btn.getAttribute('data-plan');
-        if (plan === 'free') {
-          if (C4AT3Auth.getToken()) {
-            window.location.href = './dashboard.html';
-          } else {
-            openAuthModal('signup');
-          }
-          return;
-        }
-        window.location.href = `./checkout.html?plan=${encodeURIComponent(plan || '')}`;
-      });
+      if (!wiredCheckoutButtons.has(btn)) {
+        btn.addEventListener('click', (event) => {
+          event.preventDefault();
+          const plan = btn.getAttribute('data-plan');
+          handleCheckout(plan, { trigger: btn });
+        });
+        wiredCheckoutButtons.add(btn);
+      }
     });
   }
 
   function initDashboardPage() {
-    if (!C4AT3Auth.getToken()) {
+    if (!getAuthToken()) {
       window.location.href = './index.html';
       return;
     }
@@ -411,7 +648,7 @@
     const logoutCta = document.getElementById('dashboardLogout');
     if (logoutCta) {
       logoutCta.addEventListener('click', () => {
-        C4AT3Auth.clear();
+        removeAuthToken();
         syncAuthUI();
         window.location.href = './index.html';
       });
@@ -433,9 +670,9 @@
   }
 
   async function ensureUserProfile() {
-    const user = C4AT3Auth.getUser();
+    const user = getCurrentUser();
     if (user) return user;
-    return C4AT3Auth.refreshUser();
+    return refreshCurrentUser();
   }
 
   function updateDashboardHeader(user) {
@@ -462,7 +699,7 @@
     }
 
     try {
-      const response = await C4AT3Auth.authedFetch('/api/analytics/usage');
+      const response = await authedFetch('/api/analytics/usage');
       if (response.ok) {
         const payload = await response.json();
         const data = payload.data || payload;
@@ -488,7 +725,7 @@
   }
 
   function buildUsageFallback() {
-    const tier = (C4AT3Auth.getUser()?.tier || 'free').toLowerCase();
+    const tier = (getCurrentUser()?.tier || 'free').toLowerCase();
     const limits = { free: 5, starter: 20, professional: 60, pro: 150 };
     const limit = limits[tier] || 5;
     return {
@@ -554,7 +791,7 @@
     resultEl.hidden = true;
 
     try {
-      const response = await C4AT3Auth.authedFetch('/api/analyze', {
+      const response = await authedFetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -601,7 +838,7 @@
     if (!list) return;
 
     list.innerHTML = '';
-    const user = C4AT3Auth.getUser();
+    const user = getCurrentUser();
     if (!user) {
       const li = document.createElement('li');
       li.textContent = 'Log in to see your recent analyses.';
@@ -671,7 +908,7 @@
   }
 
   function saveAnalysisToHistory(entry) {
-    const user = C4AT3Auth.getUser();
+    const user = getCurrentUser();
     const key = user?.id || user?.email;
     if (!key) return;
 
@@ -712,7 +949,7 @@
       if (planIntro) planIntro.textContent = 'You’re checking out with:';
     }
 
-    if (!C4AT3Auth.getToken()) {
+    if (!getAuthToken()) {
       if (loginNotice) loginNotice.style.display = '';
     }
 
@@ -724,40 +961,18 @@
       checkoutButton.addEventListener('click', async () => {
         if (!selected) return;
 
-        if (!C4AT3Auth.getToken()) {
-          if (checkoutHelp) {
-            checkoutHelp.textContent = 'Please log in or create an account before continuing to checkout.';
-            checkoutHelp.classList.add('error');
-          }
-          openAuthModal('signup');
-          return;
-        }
-
         setButtonLoading(checkoutButton, true, 'Connecting…');
         if (checkoutHelp) {
           checkoutHelp.classList.remove('error', 'success', 'warning');
           checkoutHelp.textContent = 'Attempting to start checkout…';
+          checkoutHelp.style.display = '';
         }
 
         try {
-          const response = await C4AT3Auth.authedFetch('/api/billing/create-session', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ plan: selected.code })
+          await handleCheckout(selected.code, {
+            helpElement: checkoutHelp,
+            trigger: checkoutButton
           });
-
-          const payload = await safeJson(response);
-          if (response.ok && payload?.url) {
-            window.location.href = payload.url;
-            return;
-          }
-
-          throw new Error('Billing is not enabled yet. Our team will reach out to complete your upgrade.');
-        } catch (error) {
-          if (checkoutHelp) {
-            checkoutHelp.textContent = error.message || 'Billing is not enabled yet. Our team will reach out to complete your upgrade.';
-            checkoutHelp.classList.add('warning');
-          }
         } finally {
           setButtonLoading(checkoutButton, false);
         }
